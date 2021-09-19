@@ -1,0 +1,343 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <title>IFS 3D</title>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      margin: 0;
+    }
+    body {
+      color: #444;
+    }
+    h1 {
+      font-family: sans-serif;
+      margin: 0px;
+    }
+    a {
+      color: #185b7c;
+    }
+    a:hover {
+      background-color: #296c8d;
+      color: #fff;
+    }
+    p {
+      margin: 0 0 12px 0;
+      padding: 0px;
+    }
+    .info {
+      float: right;
+    }
+    #header {
+      padding: 10px 0 5px 0px;
+      margin: 0 0 5px 0;
+      border-bottom: 1px solid #aaa;
+    }
+    #footer {
+      margin: 10px 0 0 0;
+      border-top: 1px solid #aaa;
+      padding: 5px 0 10px 0;
+      color: #888;
+      font-size: 90%;
+    }
+    #nav {
+      position: relative;
+      width: 600px;
+      height: 600px;
+      margin-top: -600px;
+      z-index: 3;
+    }
+    #arrows,
+    #working {
+      position: relative;
+      background: transparent url('./graphics.png') no-repeat;
+      width: 600px;
+      height: 600px;
+      margin-top: -600px;
+      display: none;
+    }
+    #working {
+      z-index: 2;
+      background-position: 0px -1200px;
+    }
+    #arrows {
+      z-index: 1;
+      background-position: 0px -600px;
+    }
+    #background {
+      background: transparent url('./graphics.png') no-repeat;
+      width: 600px;
+      height: 600px;
+    }
+    #ui {
+      width: 400px;
+      float: left;
+    }
+    #display {
+      width: 600px;
+      float: left;
+    }
+    #content {
+      width: 1000px;
+      margin: 0 auto;
+    }
+    .matrix {
+      float: left;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 3px;
+      margin: 0 10px 7px 10px;
+    }
+    input[type=text] {
+      width: 33px;
+      margin: 0;
+      padding: 0px;
+      font-size: 12px;
+    }
+    input[type=number] {
+      width: 50px;
+    }
+    #control {
+      padding: 0 15px 10px 15px;
+      text-align: right;
+    }
+    input[type=button] {
+      font-size: 18px;
+      padding: 8px 20px;
+    }
+    #predefined {
+      float: left;
+      width: 560px;
+      padding: 20px 0 0 40px;
+    }
+    #predefined a{
+      padding: 0 10px 0 0;
+    }
+  </style>
+  <script id="shader-fs" type="x-shader/x-fragment">
+    precision highp float;
+
+    varying vec4 position;
+    varying vec4 normal;
+
+    vec4 getToon(vec3 pos, vec3 nor, vec3 lPos, vec3 color) {
+      vec3 L = normalize(lPos - pos);
+      float intensity = dot(nor, L);
+
+      if (intensity < 0.0) {
+        return vec4(color * 0.1, 1.0);
+      } else {
+        return vec4(color * intensity, 1.0);
+      }
+    }
+
+    void main(void) {
+      gl_FragColor = getToon(position.xyz, normal.xyz, vec3(4.0, 4.0, 12.0), vec3(0.756, 0.019, 0.019)) +
+                     getToon(position.xyz, normal.xyz, vec3(-6.0, 6.0, -2.0), vec3(0.2, 0.2, 0.15));
+    }
+  </script>
+  <script id="shader-vs" type="x-shader/x-vertex">
+    uniform mat4 mvMat;
+    uniform mat4 pMat;
+
+    attribute vec3 vPos;
+    attribute vec3 vNor;
+
+    varying vec4 normal;
+    varying vec4 position;
+
+    void main(void) {
+      normal = vec4(vNor, 1.0);
+      position = pMat * mvMat * vec4(vPos.xyz, 1.0);
+      gl_Position = position;
+    }
+  </script>
+  <script type="text/javascript" charset="utf-8" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.3/jquery.min.js"></script>
+  <script type="text/javascript" charset="utf-8" src="glMatrix-min.js"></script>
+  <script type="text/javascript" charset="utf-8" src="batch.js"></script>
+  <script type="text/javascript" charset="utf-8" src="ui.js"></script>
+  <script type="text/javascript" charset="utf-8" src="ifs.js"></script>
+  <script type="text/javascript" charset="utf-8" src="gl.js"></script>
+  <script type="text/javascript" charset="utf-8">
+    $(document).ready(main);
+  </script>
+</head>
+<body>
+  <div id="content">
+    <div id="header">
+      <p class="info">
+        Supported browsers: <a href="http://www.khronos.org/webgl/wiki/Getting_a_WebGL_Implementation">http://www.khronos.org/...</a>
+        <br/>
+        Source code: <a href="http://bitbucket.org/petraszd/ifs-3d">http://bitbucket.org/petraszd/ifs-3d</a>
+      </p>
+      <h1>3D IFS WebGL demo</h1>
+      <div style="clear: both;"></div>
+    </div>
+    <div id="ui">
+      <div id="control">
+        <label for="depth">Depth</label>: <input id="depth" type="number" min="0" step="1" value="3" />
+        <input type="button" id="generate" value="Generate" />
+        <div id="message" style="visibility: hidden;">
+          Warning: CPU intensive.
+        </div>
+      </div>
+      <div class="matrix">
+        <input type="text" value="1" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="1" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="1" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="1" /> <br/>
+        <input type="checkbox" /> Active
+      </div>
+      <div class="matrix">
+        <input type="text" value="1" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="1" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="1" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="1" /> <br/>
+        <input type="checkbox" /> Active
+      </div>
+      <div class="matrix">
+        <input type="text" value="1" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="1" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="1" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="1" /> <br/>
+        <input type="checkbox" /> Active
+      </div>
+      <div class="matrix">
+        <input type="text" value="1" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="1" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="1" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="1" /> <br/>
+        <input type="checkbox" /> Active
+      </div>
+      <div class="matrix">
+        <input type="text" value="1" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="1" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="1" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="1" /> <br/>
+        <input type="checkbox" /> Active
+      </div>
+      <div class="matrix">
+        <input type="text" value="1" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="1" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="1" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="1" /> <br/>
+        <input type="checkbox" /> Active
+      </div>
+      <div class="matrix">
+        <input type="text" value="1" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="1" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="1" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="1" /> <br/>
+        <input type="checkbox" /> Active
+      </div>
+      <div class="matrix">
+        <input type="text" value="1" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="1" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="1" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="1" /> <br/>
+        <input type="checkbox" /> Active
+      </div>
+      <div class="matrix">
+        <input type="text" value="1" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="1" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="1" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="1" /> <br/>
+        <input type="checkbox" /> Active
+      </div>
+      <div class="matrix">
+        <input type="text" value="1" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="1" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="1" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="1" /> <br/>
+        <input type="checkbox" /> Active
+      </div>
+      <div class="matrix">
+        <input type="text" value="1" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="1" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="1" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="1" /> <br/>
+        <input type="checkbox" /> Active
+      </div>
+      <div class="matrix">
+        <input type="text" value="1" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="1" />
+        <input type="text" value="0" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="1" /> <input type="text" value="0" /> <br/>
+        <input type="text" value="0" /> <input type="text" value="0" />
+        <input type="text" value="0" /> <input type="text" value="1" /> <br/>
+        <input type="checkbox" /> Active
+      </div>
+    </div>
+
+    <div id="display">
+      <div id="background">
+        <canvas id="ifs-canvas" width="600" height="600"></canvas>
+      </div>
+      <div id="working"></div>
+      <div id="arrows"></div>
+      <div id="nav"></div>
+    </div>
+    <div id="predefined">
+      <a href="#0.5,0,0,0,0,0.5,0,0.5,0,0,0.5,0,0,0,0,1,0.5,0,0,0.5,0,0.5,0,-0.5,0,0,0.5,-0.5,0,0,0,1,0.5,0,0,0.5,0,0.5,0,-0.5,0,0,0.5,0.5,0,0,0,1,0.5,0,0,-0.5,0,0.5,0,-0.5,0,0,0.5,-0.5,0,0,0,1,0.5,0,0,-0.5,0,0.5,0,-0.5,0,0,0.5,0.5,0,0,0,1">3D Sierpinski V0</a>
+      <a href="#0.5,0,0,0.5,0,0.5,0,0.5,0,0,0.5,-0.5,0,0,0,1,0.5,0,0,0.5,0,0.5,0,-0.5,0,0,0.5,-0.5,0,0,0,1,0.5,0,0,0.5,0,0.5,0,-0.5,0,0,0.5,0.5,0,0,0,1,0.5,0,0,-0.5,0,0.5,0,-0.5,0,0,0.5,-0.5,0,0,0,1">3D Sierpinski V1</a>
+      <a href="#0.5,0,0,0.5,0,0.5,0,0.5,0,0,0.5,-0.5,0,0,0,1,0.5,0,0,0.5,0,0.5,0,-0.5,0,0,0.5,-0.5,0,0,0,1,0.5,0,0,-0.5,0,0.5,0,-0.5,0,0,0.5,-0.5,0,0,0,1">2D Sierpinski</a>
+      <a href="#0.5,0,0,0,0,0.5,0,0,0,0,0.5,0,0,0,0,1,0.25,0,0,0.75,0,0.25,0,0.75,0,0,0.25,0.75,0,0,0,1,0.25,0,0,-0.75,0,0.25,0,0.75,0,0,0.25,0.75,0,0,0,1,0.25,0,0,0.75,0,0.25,0,-0.75,0,0,0.25,0.75,0,0,0,1,0.25,0,0,0.75,0,0.25,0,0.75,0,0,0.25,-0.75,0,0,0,1,0.25,0,0,-0.75,0,0.25,0,0.75,0,0,0.25,-0.75,0,0,0,1,0.25,0,0,0.75,0,0.25,0,-0.75,0,0,0.25,-0.75,0,0,0,1,0.25,0,0,-0.75,0,0.25,0,-0.75,0,0,0.25,-0.75,0,0,0,1,0.25,0,0,-0.75,0,0.25,0,-0.75,0,0,0.25,0.75,0,0,0,1">Complex V0</a>
+      <a href="#0.34,0,0,0,0,0.34,0,0,0,0,0.34,0.66,0,0,0,1,0.34,0,0,0,0,0.34,0,0,0,0,0.34,-0.66,0,0,0,1,0.34,0,0,0,0,0.34,0,0,0,0,0.34,0,0,0,0,1,0.34,0,0,0.66,0,0.34,0,0,0,0,0.34,0,0,0,0,1,0.34,0,0,-0.66,0,0.34,0,0,0,0,0.34,0,0,0,0,1,0.34,0,0,0,0,0.34,0,0.66,0,0,0.34,0,0,0,0,1,0.34,0,0,0,0,0.34,0,-0.66,0,0,0.34,0,0,0,0,1">Complex V1</a>
+    </div>
+    <div style="clear: both;"></div>
+    <div id="footer">
+      © Copyright 2010 Petras Zdanavičius (petraszd&lt;secret symbol&gt;gmail&lt;secret dot&gt;com). All Rights Reserved.
+    </div>
+  </div>
+</body>
+</html>
